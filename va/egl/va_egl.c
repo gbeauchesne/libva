@@ -53,262 +53,81 @@
  *
  * Bellow API vaGetEGLClientBufferFromSurface is for this purpose
  */
-#include "va_egl_private.h"
-#include "va_egl_impl.h"
+
+#include "sysdeps.h"
+#include "va.h"
+#include "va_backend_egl.h"
+#include "va_egl.h"
 
 #define CTX(dpy) (((VADisplayContextP)dpy)->pDriverContext)
 #define CHECK_DISPLAY(dpy) if( !vaDisplayIsValid(dpy) ) { return VA_STATUS_ERROR_INVALID_DISPLAY; }
 
-#define INIT_CONTEXT(ctx, dpy) do {                             \
-        if (!vaDisplayIsValid(dpy))                             \
-            return VA_STATUS_ERROR_INVALID_DISPLAY;             \
-                                                                \
-        ctx = ((VADisplayContextP)(dpy))->pDriverContext;       \
-        if (!(ctx))                                             \
-            return VA_STATUS_ERROR_INVALID_DISPLAY;             \
-                                                                \
-        status = va_egl_init_context(dpy);                      \
-        if (status != VA_STATUS_SUCCESS)                        \
-            return status;                                      \
-    } while (0)
-
-#define INVOKE(ctx, func, args) do {                            \
-        VADriverVTablePrivEGLP vtable;                          \
-        vtable = &VA_DRIVER_CONTEXT_EGL(ctx)->vtable;           \
-        if (!vtable->va##func##EGL)                             \
-            return VA_STATUS_ERROR_UNIMPLEMENTED;               \
-        status = vtable->va##func##EGL args;                    \
-    } while (0)
-
-
-VAStatus vaGetEGLClientBufferFromSurface (
-    VADisplay dpy,
-    VASurfaceID surface,
-    EGLClientBuffer *buffer /* out*/
-)
+static inline int
+check_vtable(struct VADriverVTableEGL *vtable)
 {
-  VADriverContextP ctx;
-  struct VADriverVTableEGL *va_egl;
-  CHECK_DISPLAY(dpy);
-  ctx = CTX(dpy);
-
-  va_egl = (struct VADriverVTableEGL *)ctx->vtable_egl;
-  if (va_egl && va_egl->vaGetEGLClientBufferFromSurface) {
-      return va_egl->vaGetEGLClientBufferFromSurface(ctx, surface, buffer);
-  } else
-      return VA_STATUS_ERROR_UNIMPLEMENTED;
-}
-  
-// Destroy VA/EGL display context
-static void va_DisplayContextDestroy(VADisplayContextP pDisplayContext)
-{
-    VADisplayContextEGLP pDisplayContextEGL;
-    VADriverContextP     pDriverContext;
-    VADriverContextEGLP  pDriverContextEGL;
-
-    if (!pDisplayContext)
-        return;
-
-    pDriverContext     = pDisplayContext->pDriverContext;
-    pDriverContextEGL  = pDriverContext->egl;
-    if (pDriverContextEGL) {
-        free(pDriverContextEGL);
-        pDriverContext->egl = NULL;
-    }
-
-    pDisplayContextEGL = pDisplayContext->opaque;
-    if (pDisplayContextEGL) {
-        vaDestroyFunc vaDestroy = pDisplayContextEGL->vaDestroy;
-        free(pDisplayContextEGL);
-        pDisplayContext->opaque = NULL;
-        if (vaDestroy)
-            vaDestroy(pDisplayContext);
-    }
+    return vtable && ((vtable->version & 0xffffff00) == VA_EGL_ID);
 }
 
-// Return a suitable VADisplay for VA API
-VADisplay vaGetDisplayEGL(VANativeDisplay native_dpy,
-                          EGLDisplay egl_dpy)
-{
-    VADisplay            dpy                = NULL;
-    VADisplayContextP    pDisplayContext    = NULL;
-    VADisplayContextEGLP pDisplayContextEGL = NULL;
-    VADriverContextP     pDriverContext;
-    VADriverContextEGLP  pDriverContextEGL  = NULL;
-
-    dpy = vaGetDisplay(native_dpy);
-
-    if (!dpy)
-        return NULL;
-
-    if (egl_dpy == EGL_NO_DISPLAY)
-        goto error;
-
-    pDisplayContext = (VADisplayContextP)dpy;
-    pDriverContext  = pDisplayContext->pDriverContext;
-
-    pDisplayContextEGL = calloc(1, sizeof(*pDisplayContextEGL));
-    if (!pDisplayContextEGL)
-        goto error;
-
-    pDriverContextEGL = calloc(1, sizeof(*pDriverContextEGL));
-    if (!pDriverContextEGL)
-        goto error;
-
-    pDisplayContextEGL->vaDestroy = pDisplayContext->vaDestroy;
-    pDisplayContext->vaDestroy = va_DisplayContextDestroy;
-    pDisplayContext->opaque = pDisplayContextEGL;
-    pDriverContextEGL->egl_display = egl_dpy;
-    pDriverContext->egl = pDriverContextEGL;
-    return dpy;
-
-error:
-    free(pDriverContextEGL);
-    free(pDisplayContextEGL);
-    pDisplayContext->vaDestroy(pDisplayContext);
-    return NULL;
-}
-
-int vaMaxNumSurfaceTargetsEGL(
-    VADisplay dpy
+VAStatus
+vaGetEGLClientBufferFromSurface (
+    VADisplay           dpy,
+    VASurfaceID         surface,
+    EGLClientBuffer    *buffer /* out */
 )
 {
     VADriverContextP ctx;
-    struct VADriverVTableEGL *va_egl;
+    struct VADriverVTableEGL_Deprecated *va_egl;
+
     CHECK_DISPLAY(dpy);
     ctx = CTX(dpy);
 
-    va_egl = (struct VADriverVTableEGL *)ctx->vtable_egl;
+    /* Check we are not using the new VTable */
+    if (check_vtable(ctx->vtable_egl))
+        return VA_STATUS_ERROR_UNIMPLEMENTED;
 
-    if (va_egl)
-        return va_egl->max_egl_surface_targets;
-    else
-        return IMPL_MAX_EGL_SURFACE_TARGETS;
+    /* Assume deprecated VA/EGL VTable */
+    va_egl = (struct VADriverVTableEGL_Deprecated *)ctx->vtable_egl;
+    if (!va_egl->vaGetEGLClientBufferFromSurface)
+        return VA_STATUS_ERROR_UNIMPLEMENTED;
+    return va_egl->vaGetEGLClientBufferFromSurface(ctx, surface, buffer);
 }
 
-int vaMaxNumSurfaceAttributesEGL(
-    VADisplay dpy
+/* Returns the EGL client buffer info associated with a VA surface */
+VAStatus
+vaGetSurfaceBufferEGL(
+    VADisplay           dpy,
+    VASurfaceID         surface,
+    VABufferInfoEGL    *out_buffer_info
 )
 {
     VADriverContextP ctx;
-    struct VADriverVTableEGL *va_egl;
+    struct VADriverVTableEGL *vtable;
+
     CHECK_DISPLAY(dpy);
     ctx = CTX(dpy);
 
-    va_egl = (struct VADriverVTableEGL *)ctx->vtable_egl;
-
-    if (va_egl)
-        return va_egl->max_egl_surface_attributes;
-    else
-        return IMPL_MAX_EGL_SURFACE_ATTRIBUTES;
+    vtable = ctx->vtable_egl;
+    if (!check_vtable(vtable) || !vtable->vaGetSurfaceBufferEGL)
+        return VA_STATUS_ERROR_UNIMPLEMENTED;
+    return vtable->vaGetSurfaceBufferEGL(ctx, surface, out_buffer_info);
 }
 
-VAStatus vaQuerySurfaceTargetsEGL(
-    VADisplay dpy,
-    EGLenum *target_list,       /* out */
-    int *num_targets		/* out */
+/* Returns the EGL client buffer info associated with a VA image */
+VAStatus
+vaGetImageBufferEGL(
+    VADisplay           dpy,
+    VAImageID           image,
+    VABufferInfoEGL    *out_buffer_info
 )
 {
     VADriverContextP ctx;
-    VAStatus status;
+    struct VADriverVTableEGL *vtable;
 
-    INIT_CONTEXT(ctx, dpy);
+    CHECK_DISPLAY(dpy);
+    ctx = CTX(dpy);
 
-    INVOKE(ctx, QuerySurfaceTargets, (dpy, target_list, num_targets));
-    return status;
+    vtable = ctx->vtable_egl;
+    if (!check_vtable(vtable) || !vtable->vaGetImageBufferEGL)
+        return VA_STATUS_ERROR_UNIMPLEMENTED;
+    return vtable->vaGetImageBufferEGL(ctx, image, out_buffer_info);
 }
-
-VAStatus vaCreateSurfaceEGL(
-    VADisplay dpy,
-    EGLenum target,
-    unsigned int width,
-    unsigned int height,
-    VASurfaceEGL *gl_surface
-)
-{
-    VADriverContextP ctx;
-    VAStatus status;
-
-    INIT_CONTEXT(ctx, dpy);
-
-    INVOKE(ctx, CreateSurface, (dpy, target, width, height, gl_surface));
-    return status;
-}
-
-// Destroy a VA/EGL surface
-VAStatus vaDestroySurfaceEGL(
-    VADisplay dpy,
-    VASurfaceEGL egl_surface
-)
-{
-    VADriverContextP ctx;
-    VAStatus status;
-
-    INIT_CONTEXT(ctx, dpy);
-
-    INVOKE(ctx, DestroySurface, (dpy, egl_surface));
-    return status;
-}
-
-VAStatus vaAssociateSurfaceEGL(
-    VADisplay dpy,
-    VASurfaceEGL egl_surface,
-    VASurfaceID surface,
-    unsigned int flags
-)
-{
-    VADriverContextP ctx;
-    VAStatus status;
-
-    INIT_CONTEXT(ctx, dpy);
-
-    INVOKE(ctx, AssociateSurface, (dpy, egl_surface, surface, flags));
-    return status;
-}
-
-VAStatus vaSyncSurfaceEGL(
-    VADisplay dpy,
-    VASurfaceEGL egl_surface
-)
-{
-    VADriverContextP ctx;
-    VAStatus status;
-
-    INIT_CONTEXT(ctx, dpy);
-
-    INVOKE(ctx, SyncSurface, (dpy, egl_surface));
-    return status;
-}
-
-VAStatus vaGetSurfaceInfoEGL(
-    VADisplay dpy,
-    VASurfaceEGL egl_surface,
-    EGLenum *target,            /* out, the type of <buffer> */
-    EGLClientBuffer *buffer,    /* out */
-    EGLint *attrib_list,        /* out, the last attribute must be EGL_NONE */
-    int *num_attribs            /* in/out */
-)
-{
-    VADriverContextP ctx;
-    VAStatus status;
-
-    INIT_CONTEXT(ctx, dpy);
-
-    INVOKE(ctx, GetSurfaceInfo, (dpy, egl_surface, target, buffer, attrib_list, num_attribs));
-    return status;
-}
-
-VAStatus vaDeassociateSurfaceEGL(
-    VADisplay dpy,
-    VASurfaceEGL egl_surface
-)
-{
-    VADriverContextP ctx;
-    VAStatus status;
-
-    INIT_CONTEXT(ctx, dpy);
-
-    INVOKE(ctx, DeassociateSurface, (dpy, egl_surface));
-    return status;
-}
-  
