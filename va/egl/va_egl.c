@@ -54,6 +54,7 @@
  * Bellow API vaGetEGLClientBufferFromSurface is for this purpose
  */
 
+#include "sysdeps.h"
 #include "va.h"
 #include "va_backend_egl.h"
 #include "va_egl.h"
@@ -61,22 +62,72 @@
 #define CTX(dpy) (((VADisplayContextP)dpy)->pDriverContext)
 #define CHECK_DISPLAY(dpy) if( !vaDisplayIsValid(dpy) ) { return VA_STATUS_ERROR_INVALID_DISPLAY; }
 
-VAStatus vaGetEGLClientBufferFromSurface (
-    VADisplay dpy,
-    VASurfaceID surface,
-    EGLClientBuffer *buffer /* out*/
+static inline int
+check_vtable(struct VADriverVTableEGL *vtable)
+{
+    return vtable && ((vtable->version & 0xffffff00) == VA_EGL_ID);
+}
+
+VAStatus
+vaGetEGLClientBufferFromSurface (
+    VADisplay           dpy,
+    VASurfaceID         surface,
+    EGLClientBuffer    *buffer /* out */
 )
 {
-  VADriverContextP ctx;
-  struct VADriverVTableEGL *va_egl;
-  CHECK_DISPLAY(dpy);
-  ctx = CTX(dpy);
+    VADriverContextP ctx;
+    struct VADriverVTableEGL_Deprecated *va_egl;
 
-  va_egl = (struct VADriverVTableEGL *)ctx->vtable_egl;
-  if (va_egl && va_egl->vaGetEGLClientBufferFromSurface) {
-      return va_egl->vaGetEGLClientBufferFromSurface(ctx, surface, buffer);
-  } else
-      return VA_STATUS_ERROR_UNIMPLEMENTED;
+    CHECK_DISPLAY(dpy);
+    ctx = CTX(dpy);
+
+    /* Check we are not using the new VTable */
+    if (check_vtable(ctx->vtable_egl))
+        return VA_STATUS_ERROR_UNIMPLEMENTED;
+
+    /* Assume deprecated VA/EGL VTable */
+    va_egl = (struct VADriverVTableEGL_Deprecated *)ctx->vtable_egl;
+    if (!va_egl->vaGetEGLClientBufferFromSurface)
+        return VA_STATUS_ERROR_UNIMPLEMENTED;
+    return va_egl->vaGetEGLClientBufferFromSurface(ctx, surface, buffer);
 }
-  
-  
+
+/* Returns the EGL client buffer info associated with a VA surface */
+VAStatus
+vaGetSurfaceBufferEGL(
+    VADisplay           dpy,
+    VASurfaceID         surface,
+    VABufferInfoEGL    *out_buffer_info
+)
+{
+    VADriverContextP ctx;
+    struct VADriverVTableEGL *vtable;
+
+    CHECK_DISPLAY(dpy);
+    ctx = CTX(dpy);
+
+    vtable = ctx->vtable_egl;
+    if (!check_vtable(vtable) || !vtable->vaGetSurfaceBufferEGL)
+        return VA_STATUS_ERROR_UNIMPLEMENTED;
+    return vtable->vaGetSurfaceBufferEGL(ctx, surface, out_buffer_info);
+}
+
+/* Returns the EGL client buffer info associated with a VA image */
+VAStatus
+vaGetImageBufferEGL(
+    VADisplay           dpy,
+    VAImageID           image,
+    VABufferInfoEGL    *out_buffer_info
+)
+{
+    VADriverContextP ctx;
+    struct VADriverVTableEGL *vtable;
+
+    CHECK_DISPLAY(dpy);
+    ctx = CTX(dpy);
+
+    vtable = ctx->vtable_egl;
+    if (!check_vtable(vtable) || !vtable->vaGetImageBufferEGL)
+        return VA_STATUS_ERROR_UNIMPLEMENTED;
+    return vtable->vaGetImageBufferEGL(ctx, image, out_buffer_info);
+}

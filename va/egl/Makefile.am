@@ -29,13 +29,16 @@ INCLUDES = \
 	$(NULL)
 
 source_c = \
-	va_egl.c		
+	va_egl.c		\
+	$(NULL)
 
 source_h = \
+	va_backend_egl.h	\
 	va_egl.h		\
-	va_backend_egl.h
+	$(NULL)
 
-source_h_priv = 
+source_h_priv = \
+	$(NULL)
 
 noinst_LTLIBRARIES	 = libva_egl.la
 libva_eglincludedir	 = ${includedir}/va
