@@ -233,6 +233,7 @@ AM_CONDITIONAL(BUILD_EGL_TEST, [test "x$USE_EGL" = "xyes" && test "x$libglesv1_c
 USE_WAYLAND=0
 if test "$enable_wayland" = "yes"; then
     PKG_CHECK_MODULES([WAYLAND], [wayland-client], [USE_WAYLAND=1], [])
+    PKG_CHECK_MODULES([WAYLAND_SERVER], [wayland-server], [], [])
 fi
 AC_DEFINE_UNQUOTED(USE_WAYLAND, $USE_WAYLAND,
     [Defined to 1 if building the Wayland windowing system])
