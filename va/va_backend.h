@@ -428,7 +428,7 @@ struct VADriverContext
 
     void *handle;			/* dlopen handle */
     
-    void *dri_state;
+    void *drm_state;                    /* base DRM state */
     void *glx;				/* opaque for GLX code */
     void *egl;
     unsigned long reserved[44];         /* reserve for future add-ins, decrease the subscript accordingly */
