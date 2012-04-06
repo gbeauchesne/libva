@@ -6,7 +6,9 @@ LOCAL_PATH:= $(call my-dir)
 include $(CLEAR_VARS)
 
 LOCAL_SRC_FILES := \
-  mpeg2vldemo.cpp	\
+	mpeg2vldemo.cpp		\
+	../common/va_display.c	\
+	../common/va_display_android.cpp
 
 LOCAL_CFLAGS += \
     -DANDROID
