@@ -1,0 +1,13 @@
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+libdir=@libdir@
+includedir=@includedir@
+extra_libs=@WAYLAND_DRM_LIBS@
+display=wayland
+
+Name: libva-${display}
+Description: Userspace Video Acceleration (VA) ${display} interface
+Requires: libva
+Version: @VA_API_VERSION@
+Libs: -L${libdir} -lva-${display} ${extra_libs}
+Cflags: -I${includedir}

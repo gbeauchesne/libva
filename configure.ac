@@ -126,6 +126,11 @@ AC_ARG_ENABLE(egl,
                     [build with EGL support @<:@default=yes@:>@])],
     [], [enable_egl="yes"])
 
+AC_ARG_ENABLE([wayland],
+    [AC_HELP_STRING([--enable-wayland],
+                    [build with Wayland support @<:@default=yes@:>@])],
+    [], [enable_wayland="yes"])
+
 AC_ARG_ENABLE(dummy-driver,
     [AC_HELP_STRING([--enable-dummy-driver],
                     [build dummy video driver @<:@default=yes@:>@])],
@@ -224,6 +229,15 @@ AC_SUBST(EGL_DEPS_LIBS)
 AM_CONDITIONAL(USE_EGL, test "$USE_EGL" = "yes")
 AM_CONDITIONAL(BUILD_EGL_TEST, [test "x$USE_EGL" = "xyes" && test "x$libglesv1_cm" = "xyes"])
 
+# Check for Wayland
+USE_WAYLAND=0
+if test "$enable_wayland" = "yes"; then
+    PKG_CHECK_MODULES([WAYLAND], [wayland-client], [USE_WAYLAND=1], [])
+fi
+AC_DEFINE_UNQUOTED(USE_WAYLAND, $USE_WAYLAND,
+    [Defined to 1 if building the Wayland windowing system])
+AM_CONDITIONAL(USE_WAYLAND, test $USE_WAYLAND -eq 1)
+
 # We only need the headers, we don't link against the DRM libraries
 LIBVA_CFLAGS="$DRM_CFLAGS"
 AC_SUBST(LIBVA_CFLAGS)
@@ -247,6 +261,7 @@ AC_OUTPUT([
     pkgconfig/libva-egl.pc
     pkgconfig/libva-glx.pc
     pkgconfig/libva-tpi.pc
+    pkgconfig/libva-wayland.pc
     pkgconfig/libva-x11.pc
     pkgconfig/libva.pc
     test/Makefile
@@ -265,12 +280,14 @@ AC_OUTPUT([
     va/egl/Makefile
     va/glx/Makefile
     va/va_version.h
+    va/wayland/Makefile
     va/x11/Makefile
 ])
 
 # Print a small summary
 AS_IF([test x$USE_GLX = xyes], [BACKENDS="glx $BACKENDS"])
 AS_IF([test x$USE_EGL = xyes], [BACKENDS="egl $BACKENDS"])
+AS_IF([test $USE_WAYLAND -eq 1], [BACKENDS="wayland $BACKENDS"])
 
 echo
 echo "libva - ${LIBVA_VERSION} (VA-API ${VA_API_VERSION})"

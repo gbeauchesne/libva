@@ -46,6 +46,8 @@ enum {
     VA_DISPLAY_GLX      = (VA_DISPLAY_X11 | (1 << 0)),
     /** \brief VA/Android API is used, through vaGetDisplay() entry-point */
     VA_DISPLAY_ANDROID  = 0x20,
+    /** \brief VA/Wayland API is used, through vaGetDisplayWl() entry-point. */
+    VA_DISPLAY_WAYLAND  = 0x30,
 };
 
 struct VADriverVTable
@@ -448,7 +450,16 @@ struct VADriverContext
     /** \brief VA display type. */
     unsigned long display_type;
 
-    unsigned long reserved[43];         /* reserve for future add-ins, decrease the subscript accordingly */
+    /**
+     * The VA/Wayland implementation hooks.
+     *
+     * This structure is intended for drivers that implement the
+     * VA/Wayland API. libVA allocates this structure with calloc()
+     * and owns the resulting memory.
+     */
+    struct VADriverVTableWayland *vtable_wayland;
+
+    unsigned long reserved[42];         /* reserve for future add-ins, decrease the subscript accordingly */
 };
 
 #define VA_DISPLAY_MAGIC 0x56414430 /* VAD0 */
