@@ -41,6 +41,7 @@ libva_source_h = \
 	va.h			\
 	va_backend.h		\
 	va_backend_tpi.h	\
+	va_drmcommon.h		\
 	va_dummy.h		\
 	va_tpi.h		\
 	va_version.h		\
