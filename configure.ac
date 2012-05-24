@@ -234,6 +234,8 @@ USE_WAYLAND=0
 if test "$enable_wayland" = "yes"; then
     PKG_CHECK_MODULES([WAYLAND], [wayland-client], [USE_WAYLAND=1], [])
     PKG_CHECK_MODULES([WAYLAND_SERVER], [wayland-server], [], [])
+    m4_ifdef([WAYLAND_SCANNER_RULES],
+        [WAYLAND_SCANNER_RULES(['$(top_srcdir)/va/wayland/protocol'])])
 fi
 AC_DEFINE_UNQUOTED(USE_WAYLAND, $USE_WAYLAND,
     [Defined to 1 if building the Wayland windowing system])
@@ -282,6 +284,7 @@ AC_OUTPUT([
     va/glx/Makefile
     va/va_version.h
     va/wayland/Makefile
+    va/wayland/protocol/Makefile
     va/x11/Makefile
 ])
 
