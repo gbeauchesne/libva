@@ -33,6 +33,7 @@ source_c = \
 	$(NULL)
 
 source_h = \
+	va_backend_drm.h	\
 	va_drm.h		\
 	$(NULL)
 

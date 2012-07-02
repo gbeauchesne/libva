@@ -463,7 +463,15 @@ struct VADriverContext
     /** \brief VA display type. */
     unsigned long display_type;
 
-    unsigned long reserved[43];         /* reserve for future add-ins, decrease the subscript accordingly */
+    /**
+     * \brief The VA/DRM implementation hooks.
+     *
+     * This structure is allocated from libva with calloc(). Valid
+     * only if @display_type is #VA_DISPLAY_DRM.
+     */
+    struct VADriverVTableDRM *vtable_drm;
+
+    unsigned long reserved[42];         /* reserve for future add-ins, decrease the subscript accordingly */
 };
 
 #define VA_DISPLAY_MAGIC 0x56414430 /* VAD0 */
