@@ -40,6 +40,27 @@
 extern "C" {
 #endif
 
+#include <stdint.h>
+#include <drm_fourcc.h>
+
+/** \brief VA Buffer info specific to the DRM backend. */
+typedef struct _VABufferInfoDRM {
+    /** \brief Native DRM buffer handle (name). */
+    uintptr_t           handle;
+    /** \brief DRM buffer format, see DRM_FORMAT_xxx. */
+    uint32_t            format;
+    /** \brief Width in pixels for the DRM image. */
+    uint16_t            width;
+    /** \brief Height in pixels for the DRM image. */
+    uint16_t            height;
+    /** \brief Number of planes associated to this DRM image. */
+    uint32_t            num_planes;
+    /** \brief Number of bytes for a line stride. */
+    uint32_t            pitches[3];
+    /** \brief Number of bytes to add from base to reach the specified plane. */
+    intptr_t            offsets[3];
+} VABufferInfoDRM;
+
 /**
  * \brief Returns a VA display derived from the specified DRM connection.
  *
@@ -51,6 +72,50 @@ extern "C" {
  */
 VADisplay
 vaGetDisplayDRM(int fd);
+
+/**
+ * \brief Returns the DRM buffer name associated with a VA surface.
+ *
+ * This function returns the underlying DRM buffer handle for the supplied
+ * VA @surface. Additional information is also filled into @out_buffer_info
+ * so that to describe the layout of the associated DRM buffer.
+ *
+ * @param[in]   dpy     the VA display
+ * @param[in]   surface the VA surface
+ * @param[out]  out_buffer_info the returned VA/DRM buffer information
+ * @return VA_STATUS_SUCCESS if operation is successful, another #VAStatus
+ *     value otherwise.
+ */
+VAStatus
+vaGetSurfaceBufferDRM(
+    VADisplay           dpy,
+    VASurfaceID         surface,
+    VABufferInfoDRM    *out_buffer_info
+);
+
+/**
+ * \brief Returns the DRM buffer name associated with a VA image.
+ *
+ * This function returns the underlying DRM buffer handle for the
+ * supplied VA @image. Additional information is also filled into
+ * @out_buffer_info so that to describe the layout of the associated
+ * DRM buffer.
+ *
+ * Note: paletted formats are not supported. In this case,
+ * VA_STATUS_ERROR_INVALID_IMAGE_FORMAT is returned.
+ *
+ * @param[in]   dpy     the VA display
+ * @param[in]   image   the VA image
+ * @param[out]  out_buffer_info the returned VA/DRM buffer information
+ * @return VA_STATUS_SUCCESS if operation is successful, another #VAStatus
+ *     value otherwise.
+ */
+VAStatus
+vaGetImageBufferDRM(
+    VADisplay           dpy,
+    VAImageID           image,
+    VABufferInfoDRM    *out_buffer_info
+);
 
 /**@}*/
 

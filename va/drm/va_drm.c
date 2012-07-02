@@ -26,6 +26,7 @@
 #include <xf86drm.h>
 #include "va_drm.h"
 #include "va_backend.h"
+#include "va_backend_drm.h"
 #include "va_drmcommon.h"
 #include "va_drm_auth.h"
 
@@ -44,6 +45,7 @@ va_DisplayContextDestroy(VADisplayContextP pDisplayContext)
     if (!pDisplayContext)
         return;
 
+    free(pDisplayContext->pDriverContext->vtable_drm);
     free(pDisplayContext->pDriverContext->drm_state);
     free(pDisplayContext->pDriverContext);
     free(pDisplayContext);
@@ -121,6 +123,7 @@ vaGetDisplayDRM(int fd)
     VADisplayContextP pDisplayContext = NULL;
     VADriverContextP  pDriverContext  = NULL;
     struct drm_state *drm_state       = NULL;
+    struct VADriverVTableDRM *vtable  = NULL;
 
     if (fd < 0)
         return NULL;
@@ -139,6 +142,12 @@ vaGetDisplayDRM(int fd)
     pDriverContext->display_type = VA_DISPLAY_DRM;
     pDriverContext->drm_state    = drm_state;
 
+    vtable = calloc(1, sizeof(*vtable));
+    if (!vtable)
+        goto error;
+    vtable->version = VA_DRM_API_VERSION;
+    pDriverContext->vtable_drm = vtable;
+
     pDisplayContext = calloc(1, sizeof(*pDisplayContext));
     if (!pDisplayContext)
         goto error;
@@ -154,5 +163,57 @@ error:
     free(pDisplayContext);
     free(pDriverContext);
     free(drm_state);
+    free(vtable);
     return NULL;
+}
+
+#define INIT_CONTEXT(ctx, dpy) do {                             \
+        if (!vaDisplayIsValid(dpy))                             \
+            return VA_STATUS_ERROR_INVALID_DISPLAY;             \
+                                                                \
+        ctx = ((VADisplayContextP)(dpy))->pDriverContext;       \
+        if (!(ctx))                                             \
+            return VA_STATUS_ERROR_INVALID_DISPLAY;             \
+    } while (0)
+
+#define INVOKE(ctx, func, args) do {                            \
+        struct VADriverVTableDRM * const vtable =               \
+            (ctx)->vtable_drm;                                  \
+        if (!vtable || !vtable->va##func##DRM)                  \
+            return VA_STATUS_ERROR_UNIMPLEMENTED;               \
+        status = vtable->va##func##DRM args;                    \
+    } while (0)
+
+// Returns the underlying DRM buffer to the supplied VA surface
+VAStatus
+vaGetSurfaceBufferDRM(
+    VADisplay           dpy,
+    VASurfaceID         surface,
+    VABufferInfoDRM    *out_buffer_info
+)
+{
+    VADriverContextP ctx;
+    VAStatus status;
+
+    INIT_CONTEXT(ctx, dpy);
+
+    INVOKE(ctx, GetSurfaceBuffer, (ctx, surface, out_buffer_info));
+    return status;
+}
+
+// Returns the underlying DRM buffer to the supplied VA image
+VAStatus
+vaGetImageBufferDRM(
+    VADisplay           dpy,
+    VAImageID           image,
+    VABufferInfoDRM    *out_buffer_info
+)
+{
+    VADriverContextP ctx;
+    VAStatus status;
+
+    INIT_CONTEXT(ctx, dpy);
+
+    INVOKE(ctx, GetImageBuffer, (ctx, image, out_buffer_info));
+    return status;
 }
