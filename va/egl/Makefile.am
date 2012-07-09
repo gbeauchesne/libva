@@ -40,6 +40,10 @@ source_h = \
 source_h_priv = \
 	$(NULL)
 
+dist_doc_DATA = \
+	INTEL_VA_pixel_buffer.spec	\
+	$(NULL)
+
 noinst_LTLIBRARIES	 = libva_egl.la
 libva_eglincludedir	 = ${includedir}/va
 libva_eglinclude_HEADERS = $(source_h)
