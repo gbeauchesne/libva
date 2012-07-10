@@ -84,6 +84,7 @@ va_put_surface_android(
 }
 
 const VADisplayHooks va_display_hooks_android = {
+    "android",
     va_open_display_android,
     va_close_display_android,
     va_put_surface_android
