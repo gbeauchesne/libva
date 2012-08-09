@@ -92,12 +92,12 @@ vaGetEGLClientBufferFromSurface (
     return va_egl->vaGetEGLClientBufferFromSurface(ctx, surface, buffer);
 }
 
-/* Returns the EGL client buffer info associated with a VA surface */
+/* Returns the EGL client buffer associated with a VA surface */
 VAStatus
 vaGetSurfaceBufferEGL(
     VADisplay           dpy,
     VASurfaceID         surface,
-    VABufferInfoEGL    *out_buffer_info
+    EGLClientBuffer    *out_buffer
 )
 {
     VADriverContextP ctx;
@@ -109,15 +109,15 @@ vaGetSurfaceBufferEGL(
     vtable = ctx->vtable_egl;
     if (!check_vtable(vtable) || !vtable->vaGetSurfaceBufferEGL)
         return VA_STATUS_ERROR_UNIMPLEMENTED;
-    return vtable->vaGetSurfaceBufferEGL(ctx, surface, out_buffer_info);
+    return vtable->vaGetSurfaceBufferEGL(ctx, surface, out_buffer);
 }
 
-/* Returns the EGL client buffer info associated with a VA image */
+/* Returns the EGL client buffer associated with a VA image */
 VAStatus
 vaGetImageBufferEGL(
     VADisplay           dpy,
     VAImageID           image,
-    VABufferInfoEGL    *out_buffer_info
+    EGLClientBuffer    *out_buffer
 )
 {
     VADriverContextP ctx;
@@ -129,5 +129,26 @@ vaGetImageBufferEGL(
     vtable = ctx->vtable_egl;
     if (!check_vtable(vtable) || !vtable->vaGetImageBufferEGL)
         return VA_STATUS_ERROR_UNIMPLEMENTED;
-    return vtable->vaGetImageBufferEGL(ctx, image, out_buffer_info);
+    return vtable->vaGetImageBufferEGL(ctx, image, out_buffer);
+}
+
+/* Queries VA/EGL buffer attributes */
+VAStatus
+vaGetBufferAttributeEGL(
+    VADisplay           dpy,
+    EGLClientBuffer     buffer,
+    EGLenum             attribute,
+    EGLint             *value
+)
+{
+    VADriverContextP ctx;
+    struct VADriverVTableEGL *vtable;
+
+    CHECK_DISPLAY(dpy);
+    ctx = CTX(dpy);
+
+    vtable = ctx->vtable_egl;
+    if (!check_vtable(vtable) || !vtable->vaGetBufferAttributeEGL)
+        return VA_STATUS_ERROR_UNIMPLEMENTED;
+    return vtable->vaGetBufferAttributeEGL(ctx, buffer, attribute, value);
 }

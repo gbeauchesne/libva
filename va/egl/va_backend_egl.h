@@ -28,6 +28,7 @@
 #include <stdint.h>
 #include <va/va.h>
 #include <va/va_backend.h>
+#include <EGL/egl.h>
 
 /** \brief VTable version (major) id for VA/EGL hooks. */
 #define VA_EGL_ID                       (0x45474c00) /* EGL0 */
@@ -37,7 +38,6 @@
 #define VA_EGL_CLIENT_BUFFER_VERSION    (VA_EGL_ID + 1)
 
 /* Forward declarations */
-struct _VABufferInfoEGL;
 struct va_egl_client_buffer;
 
 /**
@@ -172,22 +172,31 @@ struct VADriverVTableEGL {
      *
      * Implementations shall set this field to \ref VA_EGL_VTABLE_VERSION.
      */
-    unsigned int                version;
+    unsigned int         version;
 
-    /** \brief Hook to return buffer info associated with the VA surface. */
+    /** \brief Hook to return EGL buffer associated with the VA surface. */
     VAStatus
     (*vaGetSurfaceBufferEGL)(
-        VADriverContextP        ctx,
-        VASurfaceID             surface,
-        struct _VABufferInfoEGL *out_buffer_info
+        VADriverContextP ctx,
+        VASurfaceID      surface,
+        EGLClientBuffer *out_buffer
     );
 
-    /** \brief Hook to return buffer info associated with the VA image. */
+    /** \brief Hook to return EGL buffer associated with the VA image. */
     VAStatus
     (*vaGetImageBufferEGL)(
-        VADriverContextP        ctx,
-        VAImageID               image,
-        struct _VABufferInfoEGL *out_buffer_info
+        VADriverContextP ctx,
+        VAImageID        image,
+        EGLClientBuffer *out_buffer
+    );
+
+    /** \brief Hook to query VA/EGL buffer attributes. */
+    VAStatus
+    (*vaGetBufferAttributeEGL)(
+        VADriverContextP ctx,
+        EGLClientBuffer  buffer,
+        EGLenum          attribute,
+        EGLint          *value
     );
 };
 

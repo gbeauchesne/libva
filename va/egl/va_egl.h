@@ -27,7 +27,6 @@
 
 #include <va/va.h>
 #include <EGL/egl.h>
-#include <EGL/eglext.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -86,28 +85,16 @@ enum {
     VA_EGL_PICTURE_STRUCTURE_BOTTOM_FIELD = VA_BOTTOM_FIELD
 };
 
-/** \brief VA buffer info specific to the EGL backend. */
-typedef struct _VABufferInfoEGL {
-    /** \brief Underlying surface buffer suitable for eglCreateImageKHR(). */
-    EGLClientBuffer     buffer;
-    /** \brief Buffer structure, see VA_EGL_BUFFER_STRUCTURE_xxx. */
-    unsigned int        structure;
-    /** \brief Surface width in pixels. */
-    unsigned int        width;
-    /** \brief Surface height in pixels. */
-    unsigned int        height;
-} VABufferInfoEGL;
-
 /**
- * \brief Returns the EGL client buffer info associated with a VA surface.
+ * \brief Returns the EGL client buffer associated with a VA surface.
  *
  * This functions returns the underlying surface buffer handle
  * suitable to eglCreateImageKHR() along with some additional
  * information describing the VA @surface size and buffer structure.
  *
- * @param[in]   dpy     the VA display
- * @param[in]   surface the VA surface
- * @param[out]  out_buffer_info the returned VA/EGL buffer information
+ * @param[in]   dpy         the VA display
+ * @param[in]   surface     the VA surface
+ * @param[out]  out_buffer  the returned VA/EGL client buffer handle
  * @return VA_STATUS_SUCCESS if operation is successful, another #VAStatus
  *     value otherwise.
  */
@@ -115,11 +102,11 @@ VAStatus
 vaGetSurfaceBufferEGL(
     VADisplay           dpy,
     VASurfaceID         surface,
-    VABufferInfoEGL    *out_buffer_info
+    EGLClientBuffer    *out_buffer
 );
 
 /**
- * \brief Returns the EGL client buffer info associated with a VA image.
+ * \brief Returns the EGL client buffer associated with a VA image.
  *
  * This functions returns the underlying image buffer handle suitable
  * to eglCreateImageKHR() along with some additional information
@@ -128,9 +115,9 @@ vaGetSurfaceBufferEGL(
  * Note: paletted formats are not supported. In this case,
  * VA_STATUS_ERROR_INVALID_IMAGE_FORMAT is returned.
  *
- * @param[in]   dpy     the VA display
- * @param[in]   image   the VA image
- * @param[out]  out_buffer_info the returned VA/EGL buffer information
+ * @param[in]   dpy         the VA display
+ * @param[in]   image       the VA image
+ * @param[out]  out_buffer  the returned VA/EGL client buffer handle
  * @return VA_STATUS_SUCCESS if operation is successful, another #VAStatus
  *     value otherwise.
  */
@@ -138,7 +125,29 @@ VAStatus
 vaGetImageBufferEGL(
     VADisplay           dpy,
     VAImageID           image,
-    VABufferInfoEGL    *out_buffer_info
+    EGLClientBuffer    *out_buffer
+);
+
+/**
+ * \brief Queries VA/EGL buffer attributes.
+ *
+ * This function returns the value associated with the supplied EGL
+ * attribute. The accepted values for @attribute are #EGL_WIDTH,
+ * #EGL_HEIGHT and #EGL_TEXTURE_FORMAT.
+ *
+ * @param[in]   dpy         the VA display
+ * @param[in]   buffer      the VA/EGL client buffer
+ * @param[in]   attribute   the EGL attribute to query
+ * @param[out]  value       the associated value
+ * @return VA_STATUS_SUCCESS if operation is successful, another #VAStatus
+ *     value otherwise.
+ */
+VAStatus
+vaGetBufferAttributeEGL(
+    VADisplay           dpy,
+    EGLClientBuffer     buffer,
+    EGLenum             attribute,
+    EGLint             *value
 );
 
 /**@}*/
